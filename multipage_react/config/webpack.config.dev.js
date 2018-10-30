@@ -13,6 +13,57 @@ const getClientEnvironment = require('./env');
 const paths = require('./paths');
 const ManifestPlugin = require('webpack-manifest-plugin');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
+/*生成entry对象的方法*/
+const generatedEntry = (()=>{
+  let entryObj = {};
+  paths.appArr.map(app=>{
+    entryObj[app] = [                                         // 注意根据原有的配置修改相关参数
+      require.resolve('./polyfills'),                         // copy 原入口数组
+      require.resolve('react-dev-utils/webpackHotDevClient'), // copy 原入口数组
+      `${paths.appSrc}/${app}/index.js`,                      // 相应key的路径，需要跟你的文件架构保持一致
+    ]
+  });
+  return entryObj;
+})();
+
+const generatedHTML = (()=>{
+  let htmlArr = [];
+  paths.appArr.map(app=>{
+    htmlArr.push(
+      new HtmlWebpackPlugin({    // 注意根据原有的配置修改相关参数
+        inject: true,            // 跟原有数组的配置保持一致
+        template: paths.appHtml, // 这里用的是同一个模板，可以让不同html使用不同模板
+        chunks: [app],           // 必要，指明注入的 script 对应的是哪个 entry
+        filename: app + '.html', // 必要，重命名 html
+      })
+    )
+  });
+  return htmlArr;
+})();
+
+
+function setup() {
+  const entry = {};
+  const plugins = [];
+  Object.keys(paths.dirs).forEach((key) => {
+    entry[key] = [
+      require.resolve('./polyfills'),
+      require.resolve('react-dev-utils/webpackHotDevClient'),
+      paths.dirs[key]
+    ]
+
+    const newPlugins = new HtmlWebpackPlugin({
+      chunks: [key],
+      inject: true,
+      template: paths.appHtml,
+      filename: `${key}.html`
+    })
+    plugins.push(newPlugins);
+  })
+  return { entry, plugins }
+}
+
+const Setup = setup();///这里要注意要运行一次！
 
 
 // Webpack uses `publicPath` to determine where the app is being served from.
@@ -76,7 +127,7 @@ module.exports = {
   devtool: 'cheap-module-source-map',
   // These are the "entry points" to our application.
   // This means they will be the "root" imports that are included in JS bundle.
-  entry: [
+  // entry: [
     // Include an alternative client for WebpackDevServer. A client's job is to
     // connect to WebpackDevServer by a socket and get notified about changes.
     // When you save a file, the client will either apply hot updates (in case
@@ -87,20 +138,21 @@ module.exports = {
     // the line below with these two lines if you prefer the stock client:
     // require.resolve('webpack-dev-server/client') + '?/',
     // require.resolve('webpack/hot/dev-server'),
-    require.resolve('react-dev-utils/webpackHotDevClient'),
+    // require.resolve('react-dev-utils/webpackHotDevClient'),()
     // Finally, this is your app's code:
-    paths.appIndexJs,
+    // paths.appIndexJs,()
     // We include the app code last so that if there is a runtime error during
     // initialization, it doesn't blow up the WebpackDevServer client, and
     // changing JS code would still trigger a refresh.
-  ],
+  // ],
+  entry:generatedEntry,
   output: {
     // Add /* filename */ comments to generated require()s in the output.
     pathinfo: true,
     // This does not produce a real file. It's just the virtual path that is
     // served by WebpackDevServer in development. This is the JS bundle
     // containing code from all our entry points, and the Webpack runtime.
-    filename: 'static/js/bundle.js',
+    filename: 'static/js/[name].bundle.js',
     // There are also additional JS chunk files if you use code splitting.
     chunkFilename: 'static/js/[name].chunk.js',
     // This is the URL that app is served from. We use "/" in development.
@@ -143,6 +195,7 @@ module.exports = {
       'react-native': 'react-native-web',
     },
     plugins: [
+      // ...generatedHTML,
       // Adds support for installing with Plug'n'Play, leading to faster installs and adding
       // guards against forgotten dependencies and such.
       PnpWebpackPlugin,
@@ -177,7 +230,7 @@ module.exports = {
             options: {
               formatter: require.resolve('react-dev-utils/eslintFormatter'),
               eslintPath: require.resolve('eslint'),
-              
+
             },
             loader: require.resolve('eslint-loader'),
           },
@@ -210,7 +263,7 @@ module.exports = {
               customize: require.resolve(
                 'babel-preset-react-app/webpack-overrides'
               ),
-              
+
               plugins: [
                 [
                   require.resolve('babel-plugin-named-asset-import'),
@@ -250,7 +303,7 @@ module.exports = {
               cacheDirectory: true,
               // Don't waste time on Gzipping the cache
               cacheCompression: false,
-              
+
               // If an error happens in a package, it's possible to be
               // because it was compiled. Thus, we don't want the browser
               // debugger to show the original code. Instead, the code
@@ -328,10 +381,11 @@ module.exports = {
   },
   plugins: [
     // Generates an `index.html` file with the <script> injected.
-    new HtmlWebpackPlugin({
-      inject: true,
-      template: paths.appHtml,
-    }),
+    // new HtmlWebpackPlugin({
+    //   inject: true,
+    //   template: paths.appHtml,
+    // }),
+    ...generatedHTML,
     // Makes some environment variables available in index.html.
     // The public URL is available as %PUBLIC_URL% in index.html, e.g.:
     // <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
@@ -367,6 +421,9 @@ module.exports = {
       fileName: 'asset-manifest.json',
       publicPath: publicPath,
     }),
+    // ...generatedHTML
+
+
   ],
 
   // Some libraries import Node modules but don't use them in the browser.

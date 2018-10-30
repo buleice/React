@@ -17,6 +17,33 @@ const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent')
 const paths = require('./paths');
 const getClientEnvironment = require('./env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
+/*生成entry对象的方法*/
+const generatedEntry = (()=>{
+  let entryObj = {};
+  paths.appArr.map(app=>{
+    entryObj[app] = [                                         // 注意根据原有的配置修改相关参数
+      require.resolve('./polyfills'),                         // copy 原入口数组
+      require.resolve('react-dev-utils/webpackHotDevClient'), // copy 原入口数组
+      `${paths.appSrc}/${app}/index.js`,                      // 相应key的路径，需要跟你的文件架构保持一致
+    ]
+  });
+  return entryObj;
+})();
+
+const generatedHTML = (()=>{
+  let htmlArr = [];
+  paths.appArr.map(app=>{
+    htmlArr.push(
+      new HtmlWebpackPlugin({    // 注意根据原有的配置修改相关参数
+        inject: true,            // 跟原有数组的配置保持一致
+        template: paths.appHtml, // 这里用的是同一个模板，可以让不同html使用不同模板
+        chunks: [app],           // 必要，指明注入的 script 对应的是哪个 entry
+        filename: app + '.html', // 必要，重命名 html
+      })
+    )
+  });
+  return htmlArr;
+})();
 
 
 // Webpack uses `publicPath` to determine where the app is being served from.
@@ -107,7 +134,8 @@ module.exports = {
   // You can exclude the *.map files from the build during deployment.
   devtool: shouldUseSourceMap ? 'source-map' : false,
   // In production, we only want to load the app code.
-  entry: [paths.appIndexJs],
+  // entry: [paths.appIndexJs],
+  entry:generatedEntry,
   output: {
     // The build folder.
     path: paths.appBuild,
@@ -251,7 +279,7 @@ module.exports = {
             options: {
               formatter: require.resolve('react-dev-utils/eslintFormatter'),
               eslintPath: require.resolve('eslint'),
-              
+
             },
             loader: require.resolve('eslint-loader'),
           },
@@ -284,7 +312,7 @@ module.exports = {
               customize: require.resolve(
                 'babel-preset-react-app/webpack-overrides'
               ),
-              
+
               plugins: [
                 [
                   require.resolve('babel-plugin-named-asset-import'),
@@ -322,7 +350,7 @@ module.exports = {
               cacheDirectory: true,
               // Save disk space when time isn't as important
               cacheCompression: true,
-              
+
               // If an error happens in a package, it's possible to be
               // because it was compiled. Thus, we don't want the browser
               // debugger to show the original code. Instead, the code
@@ -417,22 +445,23 @@ module.exports = {
   },
   plugins: [
     // Generates an `index.html` file with the <script> injected.
-    new HtmlWebpackPlugin({
-      inject: true,
-      template: paths.appHtml,
-      minify: {
-        removeComments: true,
-        collapseWhitespace: true,
-        removeRedundantAttributes: true,
-        useShortDoctype: true,
-        removeEmptyAttributes: true,
-        removeStyleLinkTypeAttributes: true,
-        keepClosingSlash: true,
-        minifyJS: true,
-        minifyCSS: true,
-        minifyURLs: true,
-      },
-    }),
+    // new HtmlWebpackPlugin({
+    //   inject: true,
+    //   template: paths.appHtml,
+    //   minify: {
+    //     removeComments: true,
+    //     collapseWhitespace: true,
+    //     removeRedundantAttributes: true,
+    //     useShortDoctype: true,
+    //     removeEmptyAttributes: true,
+    //     removeStyleLinkTypeAttributes: true,
+    //     keepClosingSlash: true,
+    //     minifyJS: true,
+    //     minifyCSS: true,
+    //     minifyURLs: true,
+    //   },
+    // }),
+    ...generatedHTML,
     // Inlines the webpack runtime script. This script is too small to warrant
     // a network request.
     shouldInlineRuntimeChunk && new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/runtime~.+[.]js/]),

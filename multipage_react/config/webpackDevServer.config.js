@@ -10,7 +10,16 @@ const fs = require('fs');
 
 const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
 const host = process.env.HOST || '0.0.0.0';
-
+const rewritesPath = (function(){
+  let pathArr = [];
+  paths.appArr.map(app=>{
+    pathArr.push(
+      {from: new RegExp('^\/' + app), to: `build/${app}.html`}
+      // 生成示例：{from: /^\/key1/, to: 'build/key1.html'}
+    )
+  });
+  return pathArr;
+})();
 module.exports = function(proxy, allowedHost) {
   return {
     // WebpackDevServer 2.4.3 introduced a security fix that prevents remote
@@ -80,6 +89,7 @@ module.exports = function(proxy, allowedHost) {
       // Paths with dots should still use the history fallback.
       // See https://github.com/facebook/create-react-app/issues/387.
       disableDotRule: true,
+  rewrites: rewritesPath,  //在本地server重定向的映射表
     },
     public: allowedHost,
     proxy,
