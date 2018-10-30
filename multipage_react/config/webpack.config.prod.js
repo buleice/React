@@ -39,11 +39,25 @@ const generatedHTML = (()=>{
         template: paths.appHtml, // 这里用的是同一个模板，可以让不同html使用不同模板
         chunks: [app],           // 必要，指明注入的 script 对应的是哪个 entry
         filename: app + '.html', // 必要，重命名 html
+        minify: {
+          removeComments: true,
+          collapseWhitespace: true,
+          removeRedundantAttributes: true,
+          useShortDoctype: true,
+          removeEmptyAttributes: true,
+          removeStyleLinkTypeAttributes: true,
+          keepClosingSlash: true,
+          minifyJS: true,
+          minifyCSS: true,
+          minifyURLs: true,
+        },
       })
     )
   });
   return htmlArr;
 })();
+
+console.log(generatedHTML)
 
 
 // Webpack uses `publicPath` to determine where the app is being served from.
